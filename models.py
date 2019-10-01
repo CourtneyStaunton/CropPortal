@@ -5,6 +5,10 @@ field_harvest_table = db.Table('field_harvest',
                   db.Column('field_id', db.Integer, db.ForeignKey('field.id'), primary_key=True),
                   db.Column('harvest_id', db.Integer, db.ForeignKey('harvest.id'), primary_key=True)
                   )
+crop_harvest_table = db.Table('crop_harvest',
+                  db.Column('crop_id', db.Integer, db.ForeignKey('crop.id'), primary_key=True),
+                  db.Column('harvest_id', db.Integer, db.ForeignKey('harvest.id'), primary_key=True)
+                  )
 
 
 class User(db.Model):
@@ -13,7 +17,7 @@ class User(db.Model):
     first_name = db.Column(db.String(255))
     last_name = db.Column(db.String(255))
     admin = db.Column(db.Integer, server_default = "0")
-    email = db.Column(db.String(255))
+    email = db.Column(db.String(255), unique = True)
     password = db.Column(db.String(255))
     created_at = db.Column(db.DateTime, server_default=func.now()) 
     updated_at = db.Column(db.DateTime, server_default=func.now(), onupdate=func.now())
@@ -22,7 +26,8 @@ class User(db.Model):
 class Crop(db.Model):
     __Tablename__ = "crops"
     id = db.Column(db.Integer, primary_key=True)
-    crop_name = db.Column(db.String(255), unique = True) 
+    crop_name = db.Column(db.String(255), unique = True)
+    crops_harvested = db.relationship('Harvest', lazy = 'dynamic', secondary = crop_harvest_table)
 
 class Field(db.Model):
     __Tablename__ = "fields"

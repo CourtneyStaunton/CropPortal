@@ -4,14 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Field {{fields[0]['name']}}</title>
+    <title>Field {{field_name}}</title>
 </head>
 <body>
-    <h1>Field Information</h1>
+    <h1>Field {{field_name}}</h1>
     {% for field in fields %}
-        <p>Year: {{field['year']}}</p>
-        <p>Crop: {{field['crop_name']}}</p>
-        <p>Yeild: {{field['harvest_yeild']}}</p>
+        <p>Year: {{field[0]['year']}}</p>
+        <p>Crop: {{field[2]['crop_name']}}</p>
+        <p>Yield: {{field[0]['harvest_yield']}}</p>
         <hr>
     {% endfor %}
 </body>

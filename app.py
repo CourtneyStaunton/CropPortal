@@ -1,14 +1,25 @@
 
 from flask import Flask, render_template, request, redirect, session, flash
 from config import app, db
-# from app import db
 from models import User, Crop, Field, Harvest, Images, Map
-
+from functools import wraps
 import re
 from flask_bcrypt import Bcrypt
 
 bcrypt = Bcrypt(app)
 EMAIL_REGEX = re.compile(r'^[a-zA-Z0-9.+_-]+@[a-zA-Z0-9._-]+\.[a-zA-Z]+$') 
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not "user_id" in session:
+            return redirect ("/")
+        user_id = session['user_id']
+        user = User.query.filter_by(id = user_id)
+        if not user:
+            return redirect ("/")
+        return f(user.first(), *args, **kwargs)
+    return decorated_function
 
 
 @app.route("/")
@@ -18,10 +29,6 @@ def home():
 @app.route("/to_register")
 def route_to_register(): 
     return render_template ("createNew.html")
-
-@app.route("/back1")
-def back1():
-    return redirect("/")
 
 @app.route("/register", methods=['POST'])
 def register():
@@ -90,8 +97,12 @@ def signin():
     return redirect("/")
 
 @app.route("/CropPortal")
-def CropPortal():
-    return render_template ("cropMain.html")
+@login_required
+def CropPortal(user):
+    print("*"*20)
+    print(user)
+    
+    return render_template ("cropMain.html", name= user.first_name)
 
 @app.route("/logout")
 def logout():
@@ -99,45 +110,30 @@ def logout():
     return redirect("/")
 
 @app.route("/YearMap", methods=["POST"])
-def YearMap():
+@login_required
+def YearMap(user):
     image = Images.query.filter_by(year = request.form['year']).all()
-    print("*"*10)
-    print(request.form['year'])
-    # mysql = connectToMySQL("CropMap")
-    # query =("SELECT * FROM Images WHERE year = %(yr)s")
-    # data = {
-    #     'yr': request.form["year"]
-    # }
-    # image = mysql.query_db(query, data)
     year = Harvest.query.filter_by(year = request.form['year']).all()
-    print(year)
-
-    # mysql = connectToMySQL("CropMap")
-    # query =("SELECT * from Harvest JOIN Crops ON Harvest.Crops_Crop_ID = Crops.Crop_ID JOIN Fields ON Harvest.Fields_Field_id = Fields.Field_id WHERE year= %(yr)s")
-    # data = {
-    #     'yr': request.form["year"]
-    # }
-    # year = mysql.query_db(query, data)
     return render_template("year.html", year= year[0], image = image[0])
 
 @app.route("/CropMap", methods=["POST"])
-def CropMap():
+@login_required
+def CropMap(user):
     crop = Crop.query.filter_by(crop_name = request.form['crop']).all()
    
     return render_template("crop.html", crop = crop[0])
 
 @app.route("/addtoDB")
-def addtoDB():
+@login_required
+def addtoDB(user):
     crops = Crop.query.all()
     
     return render_template ("edit.html", crops = crops)
 
-@app.route("/back2")
-def back2():
-    return redirect("/CropPortal")
 
 @app.route("/addCrop", methods=["POST","GET"])
-def addCrop():
+@login_required
+def addCrop(user):
     is_valid = True
     if len(request.form['newcrop']) < 1:
         is_valid = False
@@ -151,7 +147,8 @@ def addCrop():
         return redirect("/addtoDB")
 
 @app.route("/addField", methods=["POST","GET"])
-def addField():
+@login_required
+def addField(user):
     is_valid = True
     if len(request.form['newfield']) < 1:
         is_valid = False
@@ -165,7 +162,8 @@ def addField():
         return redirect("/addtoDB")
 
 @app.route("/addHarvest", methods=["POST"])
-def addHarvest():
+@login_required
+def addHarvest(user):
     field = Field.query.filter_by(field_name = request.form["fieldname"]).all()
     
     crop = Crop.query.filter_by(id = request.form["crop"]).all()
@@ -194,26 +192,11 @@ def addHarvest():
         return redirect("/addtoDB")
 
 @app.route("/field/<name>")
-def lookatField(name):
-    print("*"*20)
-    print(name)
-    fields = db.session.query(Harvest).join(Field, Harvest.field_id).join(Crop, Harvest.crop_id).filter(Field.field_name == name).all() 
-    # fields = session.query(Field, Harvest, Crop).filter_by(field_name = name).all()
-    # field_id = Field.query.filter_by(field_name = name).all()
-    print("*"*20)
-    # print(field_id)
-    # fields = Harvest.query.join().filter_by(field_id = field_id[0].id).all()
-
-    
-    print(fields)
-    
-    # mysql = connectToMySQL("CropMap")
-    # query = "Select * from Harvest Left Join Fields ON Harvest.Fields_Field_id = Fields.Field_id Join Crops On Harvest.Crops_Crop_id = Crops.Crop_id WHERE name = %(name)s"
-    # data = {
-    #     'name': name
-    # }
-    # fields = mysql.query_db(query, data)
-    return render_template("field.html", fields = fields)
+@login_required
+def lookatField(user, name):
+    field_name = name
+    query = db.session.query(Harvest, Field, Crop).join(Field, Harvest.field_id == Field.id).filter(Field.field_name == name).join(Crop, Harvest.crop_id == Crop.id)
+    return render_template("field.html", fields = query, field_name= field_name)
 
 if __name__ == "__main__":
     app.run(debug=True)
